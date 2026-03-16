@@ -1,0 +1,52 @@
+name: Build EasyTier GUI RPM
+
+on:
+  workflow_dispatch: # 允许手动点击按钮触发编译
+
+jobs:
+  build-rpm:
+    runs-on: ubuntu-22.04
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 安装 Tauri 依赖以及 EasyTier 要求的 protobuf、llvm 等编译工具，最重要的是包含 rpm 核心组件
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev rpm protobuf-compiler llvm clang
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 21
+
+      - name: Install pnpm
+        run: npm install -g pnpm@9
+
+      # EasyTier 官方要求使用 Rust 1.93 版本
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.93.0
+
+      # 安装项目依赖
+      - name: Install dependencies
+        run: pnpm -r install
+
+      # 使用 Tauri 官方 Action 进行编译，并通过参数强制输出 rpm
+      - name: Build Tauri App (RPM)
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: ./easytier-gui
+          args: --bundles rpm
+
+      # 提取编译好的 RPM 文件作为附件提供下载
+      - name: Upload RPM Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: easytier-gui-rpm
+          path: easytier-gui/src-tauri/target/release/bundle/rpm/*.rpm
