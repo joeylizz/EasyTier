@@ -53,4 +53,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: easytier-gui-rpm
-          path: easytier-gui/src-tauri/target/release/bundle/rpm/*.rpm
+          path: "**/bundle/rpm/*.rpm"
